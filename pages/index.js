@@ -284,7 +284,7 @@ export default function GroceryScanner() {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        text: text
+        image: base64Image
       })
     });
 
