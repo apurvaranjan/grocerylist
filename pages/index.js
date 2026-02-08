@@ -275,10 +275,10 @@ export default function GroceryScanner() {
   };
 
   const processImage = async (base64Image) => {
-  if (!text.trim()) return [];
+  if (!base64Image) return [];
 
   try {
-    const response = await fetch('/api/process-text', {
+    const response = await fetch('/api/process-image', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
