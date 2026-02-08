@@ -275,167 +275,68 @@ export default function GroceryScanner() {
   };
 
   const processImage = async (base64Image) => {
-    try {
-      const base64Data = base64Image.split(',')[1];
-      
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
-          messages: [
-            {
-              role: 'user',
-              content: [
-                {
-                  type: 'image',
-                  source: {
-                    type: 'base64',
-                    media_type: 'image/jpeg',
-                    data: base64Data
-                  }
-                },
-                {
-                  type: 'text',
-                  text: `Extract all grocery items from this shopping list image. The list may contain items in Hindi (Devanagari script), English, or a mix of both languages. For each item:
-1. Identify the item name (recognize both Hindi and English text)
-2. Extract quantity if mentioned (default to 1 if not specified)
-3. Normalize the item name to a common brand/product (e.g., "milk" or "दूध" → "Amul Taaza Toned Milk")
-4. Suggest an alternative brand option
+  if (!text.trim()) return [];
 
-Return ONLY a JSON array with this exact structure, no other text:
-[
-  {
-    "item": "normalized item name with brand",
-    "quantity": "quantity with unit",
-    "searchTerm": "search term for BigBasket",
-    "alternative": "alternative brand name"
-  }
-]
+  try {
+    const response = await fetch('/api/process-text', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        text: text
+      })
+    });
 
-Example output:
-[
-  {"item": "Amul Taaza Toned Milk", "quantity": "1 L", "searchTerm": "amul toned milk", "alternative": "Mother Dairy Toned Milk"},
-  {"item": "Organic Tomatoes", "quantity": "500 g", "searchTerm": "organic tomatoes", "alternative": "Regular Tomatoes"}
-]`
-                }
-              ]
-            }
-          ]
-        })
-      });
-
-      if (!response.ok) {
-        if (response.status === 429) {
-          throw new Error('RATE_LIMIT: Too many requests. Please wait a minute and try again.');
-        } else if (response.status === 529) {
-          throw new Error('SERVICE_UNAVAILABLE: Service temporarily unavailable. Please try again in a moment.');
-        } else {
-          throw new Error(`API_ERROR: Server returned status ${response.status}`);
-        }
+    if (!response.ok) {
+      if (response.status === 429) {
+        throw new Error('RATE_LIMIT: Too many requests. Please wait a minute and try again.');
+      } else if (response.status === 529) {
+        throw new Error('SERVICE_UNAVAILABLE: Service temporarily unavailable. Please try again in a moment.');
+      } else {
+        throw new Error(`API_ERROR: Server returned status ${response.status}`);
       }
-
-      const data = await response.json();
-      
-      if (!data.content || data.content.length === 0) {
-        throw new Error('No response from AI');
-      }
-
-      let textContent = data.content
-        .filter(block => block.type === 'text')
-        .map(block => block.text)
-        .join('');
-
-      textContent = textContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      
-      const parsedItems = JSON.parse(textContent);
-      
-      if (!Array.isArray(parsedItems)) {
-        throw new Error('Invalid response format');
-      }
-
-      return parsedItems;
-    } catch (err) {
-      console.error('Processing error:', err);
-      throw err;
     }
-  };
 
-  const processTextInput = async (text) => {
-    if (!text.trim()) return [];
-
-    try {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1000,
-          messages: [
-            {
-              role: 'user',
-              content: `Extract all grocery items from this text. The text may contain items in Hindi (Devanagari script), English, or a mix of both languages. For each item:
-1. Identify the item name (recognize both Hindi and English text)
-2. Extract quantity if mentioned (default to 1 if not specified)
-3. Normalize the item name to a common brand/product (e.g., "milk" or "दूध" → "Amul Taaza Toned Milk")
-4. Suggest an alternative brand option
-
-Text: ${text}
-
-Return ONLY a JSON array with this exact structure, no other text:
-[
-  {
-    "item": "normalized item name with brand",
-    "quantity": "quantity with unit",
-    "searchTerm": "search term for BigBasket",
-    "alternative": "alternative brand name"
+    const data = await response.json();
+    return data.items;
+  } catch (err) {
+    console.error('Processing error:', err);
+    throw err;
   }
-]`
-            }
-          ]
-        })
-      });
+};
 
-      if (!response.ok) {
-        if (response.status === 429) {
-          throw new Error('RATE_LIMIT: Too many requests. Please wait a minute and try again.');
-        } else if (response.status === 529) {
-          throw new Error('SERVICE_UNAVAILABLE: Service temporarily unavailable. Please try again in a moment.');
-        } else {
-          throw new Error(`API_ERROR: Server returned status ${response.status}`);
-        }
+const processTextInput = async (text) => {
+  if (!text.trim()) return [];
+
+  try {
+    const response = await fetch('/api/process-text', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        text: text
+      })
+    });
+
+    if (!response.ok) {
+      if (response.status === 429) {
+        throw new Error('RATE_LIMIT: Too many requests. Please wait a minute and try again.');
+      } else if (response.status === 529) {
+        throw new Error('SERVICE_UNAVAILABLE: Service temporarily unavailable. Please try again in a moment.');
+      } else {
+        throw new Error(`API_ERROR: Server returned status ${response.status}`);
       }
-
-      const data = await response.json();
-      
-      if (!data.content || data.content.length === 0) {
-        throw new Error('No response from AI');
-      }
-
-      let textContent = data.content
-        .filter(block => block.type === 'text')
-        .map(block => block.text)
-        .join('');
-
-      textContent = textContent.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      
-      const parsedItems = JSON.parse(textContent);
-      
-      if (!Array.isArray(parsedItems)) {
-        throw new Error('Invalid response format');
-      }
-
-      return parsedItems;
-    } catch (err) {
-      console.error('Processing error:', err);
-      throw err;
     }
-  };
+
+    const data = await response.json();
+    return data.items;
+  } catch (err) {
+    console.error('Processing error:', err);
+    throw err;
+  }
+};
 
   const handleLetsShop = async () => {
     setLoading(true);
